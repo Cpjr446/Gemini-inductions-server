@@ -1,10 +1,10 @@
 
 #!/bin/bash
 
-# Base directory
-CORE_HOME="Core"
-MENTORS_DIR="$CORE_HOME/mentors"
-MENTEES_DIR="$CORE_HOME/mentees"
+# Core directory
+core_home="/home/cpvbox/Sysad/Core"
+mentor_dir="$core_home/mentors"
+mentees_dir="$core_home/mentees"
 
 # Function to read mentor details
 read_mentors() {
@@ -16,25 +16,25 @@ read_mentors() {
 
 # Function to read mentee details
 read_mentees() {
-  while read -r roll_number domains; do
+  while read -r roll_no domains; do
     for domain in $domains; do
-      mentee_domains["$roll_number"]+="$domain "
+      mentee_domains["$roll_no"]+="$domain "
     done
-  done < "$CORE_HOME/mentees_domain.txt"
+  done < "$core_home/mentees_domain.txt"
 }
 
-# Function to allocate mentees to mentors (FCFS)
+# Function to allocate mentees to mentors 
 allocate_mentees() {
   # Read mentor and mentee data
   read_mentors
   read_mentees
 
-  # Process mentees in order
+  # To process mentees in order
   for mentee_roll_number in "${!mentee_domains[@]}"; do
     # Extract mentee's domains
     mentee_preferred_domains=(${mentee_domains[$mentee_roll_number]})
 
-    # Loop through mentors (FCFS)
+    # Loop through mentors 
     for mentor in "${!mentor_capacity[@]}"; do
       # Check if mentor has capacity and domain match
       if [ "${mentor_capacity[$mentor]}" -gt 0 ]; then
@@ -57,28 +57,23 @@ allocate_mentees() {
 
 # Call the allocation function
 allocate_mentees
-#!/bin/bash
+echo "Mentor Allocation completed"
 
-core_home="/home/cpvbox/Sysad"
 
-# Read mentor details
-declare -A mentor_capacity
-declare -A mentor_allocations
 
-while IFS=: read -r mentor username domain capacity; do
-    mentor_capacity["$username"]=$capacity
-    mentor_allocations["$username"]=0
-done < ./mentors.txt
 
-# Read mentee details and allocate
-while IFS=: read -r mentee username roll; do
-    for mentor in "${!mentor_capacity[@]}"; do
-        if (( ${mentor_allocations[$mentor]} < ${mentor_capacity[$mentor]} )); then
-            echo "$roll" >> $core_home/mentors/${mentor}/allocatedMentees.txt
-            ((mentor_allocations[$mentor]++))
-            break
-        fi
-    done
-done < ./mentees.txt
 
-echo "Mentor allocation completed."
+
+
+
+
+
+
+
+
+
+
+
+
+
+
