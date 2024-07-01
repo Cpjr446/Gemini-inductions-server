@@ -1,71 +1,59 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Directories
+CORE_HOME="/home/cpvbox/Sysad2/Core"
+MENTORS_DIR="$CORE_HOME/mentors"
+MENTEES_DIR="$CORE_HOME/mentees"
 
-# Set core user and base directory
-core_user="/home/cpvbox/Sysad/Core"
-base_dir="$core_user"
+# Create Core user and home directories if they don't exist
+if ! id -u Core >/dev/null 2>&1; then
+    useradd -m -d $CORE_HOME Core
+fi
+mkdir -p "${MENTORS_DIR}" "${MENTEES_DIR}"
 
-# Directories under Core's home directory
-sudo mkdir -p "$base_dir/mentors"
-sudo mkdir -p "$base_dir/mentees"
+# Create the mentees_domain.txt file with appropriate permissions
+touch $CORE_HOME/mentees_domain.txt
+chmod 222 $CORE_HOME/mentees_domain.txt  # Only write permissions for mentees
 
-# Create directories for Webdev, Appdev, and Sysad under mentors
-sudo mkdir -p "$base_dir/mentors/Webdev"
-sudo mkdir -p "$base_dir/mentors/Appdev"
-sudo mkdir -p "$base_dir/mentors/Sysad"
-
-# Read mentor details and create mentor accounts and directories
-while IFS= read -r line; do
-    mentor_name=$(echo "$line" | cut -d' ' -f1)
-    domain=$(echo "$line" | cut -d' ' -f2)
-
-    mentor_dir="$base_dir/mentors/${domain}/$mentor_name"
-
-    # Create user and home directory based on domain
-    sudo useradd -m -d "$mentor_dir" "$mentor_name"
-    echo "$mentor_name:Del24mentor$$" | sudo chpasswd  # Replace 'password' with the actual password
-
-    # Create required files and directories in mentors' home directories
-    sudo touch "$mentor_dir/allocatedMentees.txt"
-    sudo mkdir -p "$mentor_dir/submittedTasks/task"{1,2,3}
+# Read mentor details and create directories
+declare -a mentor_capacity
+while read -r name domain capacity; do
+    MENTOR_HOME="${MENTORS_DIR}/${domain}/${name}"
+    # if [[ $MENTOR_HOME == "/home/cpvbox/Sysad2/mentors//"]] {
+    #     # continue
+    # }
+# 
+    # MENTOR_HOME="/home/cpvbox/Sysad2/Core/mentors/$domain/$name"
+    if ! id -u $name >/dev/null 2>&1; then
+        useradd -m -d $MENTOR_HOME $name
+    fi
+    
+    mkdir -p "${MENTOR_HOME}/submittedTasks/task1" "${MENTOR_HOME}/submittedTasks/task2" "${MENTOR_HOME}/submittedTasks/task3"
+    touch "${MENTOR_HOME}/allocatedMentees.txt"
+    mentor_capacity["$name"]=$capacity
 done < mentorDetails.txt
 
-# Read mentee details and create mentee accounts and directories
-while IFS= read -r line; do
-    mentee_name=$(echo "$line" | cut -d' ' -f1 | tr -d '\r')
-    roll_no=$(echo "$line" | cut -d' ' -f2 | tr -d '\r')
+# Read mentee details and create directories
+while read -r mentee_name mentee_rollno; do
+    MENTEE_HOME="$MENTEES_DIR/$mentee_rollno"
+    mkdir -p $MENTEE_HOME
+    if ! id -u $mentee_rollno >/dev/null 2>&1; then
+        useradd --badname -m -d $MENTEE_HOME $mentee_rollno
+    fi
+    cd $MENTEE_HOME
+    touch domain_pref.txt task_completed.txt task_submitted.txt
+    chmod 755 "$MENTEE_HOME"
+    chown -R "${mentee_rollno}:${mentee_rollno}" ${MENTEE_HOME}
+done < menteeDetails.txt
 
-    mentee_dir="$base_dir/mentees/$roll_no"
 
-    # Create user and home directory
-    sudo useradd -m -d "$mentee_dir" "$mentee_name"
-    echo "$mentee_name:Del24mentee$$" | sudo chpasswd  # Replace 'password' with the actual password
+# Set permissions for Core to access all directories
+setfacl -R -m u:Core:rwx $MENTORS_DIR $MENTEES_DIR
 
-    # Create required files in mentees' home directories
-    sudo touch "$mentee_dir/domain_pref.txt"
-    sudo touch "$mentee_dir/task_completed.txt"
-    sudo touch "$mentee_dir/task_submitted.txt"
-done < <(tr -d '\r' < menteeDetails.txt)
-
-# Set permissions so Core can access everyone's home directories
-sudo setfacl -R -m u:Core:rwx "$base_dir/mentees"
-sudo setfacl -R -m u:Core:rwx "$base_dir/mentors"
-
-# Ensure mentors cannot access other mentors' home directories
-for dir in "$base_dir/mentors"/*; do
-    for subdir in "$dir"/*; do
-        sudo chmod 700 "$subdir"
-    done
+for mentor_home in $(find $MENTORS_DIR -mindepth 2 -maxdepth 2 -type d); do
+    chmod 765 $mentor_home
 done
 
-# Ensure mentees can only access their own home directory
-for dir in "$base_dir/mentees"/*; do
-    sudo chmod 700 "$dir"
+for mentee_home in $(find $MENTEES_DIR -mindepth 1 -maxdepth 1 -type d); do
+    chmod 765 $mentee_home
+    setfacl -m u:${mentee_home##*/}:w $CORE_HOME/mentees_domain.txt
 done
-
-# Create mentees_domain.txt in Core's home directory
-mentees_domain_file="$base_dir/mentees_domain.txt"
-sudo touch "$mentees_domain_file"
-sudo chown Core:Core "$mentees_domain_file"
-sudo chmod 222 "$mentees_domain_file"
-
-echo "User Generation Completed"
