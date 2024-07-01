@@ -1,35 +1,50 @@
 #!/usr/bin/env bash
 
 # Base directory
-base_dir="/home/cpvbox/Sysad"
-core_home="$base_dir/Core"
-mentees_dir="$core_home/mentees"
+BASE_DIR="/home/cpvbox/Sysad2"
+CORE_HOME="$BASE_DIR/Core"
+MENTEES_DIR="$CORE_HOME/mentees"
 
+# Function to handle domain preference
 domain_pref() {
     mentee_name=$1
-    domain_pref_file="$mentees_dir/$mentee_name/domain_pref.txt"
-  
- # Check if mentee exists
-    if [ ! -d "$MENTEES_DIR/$mentee_name" ]; then
-        echo "Mentee $mentee_name does not exist."
-        exit 1
-    fi
-    echo "Enter your roll number:"
-    read roll_no
-    echo "Enter your domain preferences (1-3, separated by space):"
-    read -a domains
-    for domain in "${domains[@]}"; do
-     echo $domain >> $mentee_home/domain_pref.txt
-     mkdir -p $mentee_dir/$domain
-    done
-echo "$USER:${domains[*]}" >> $core_home/mentees_domain.txt
-echo "Domain preferences set for mentee $mentee_name $roll_no."
+    domain_pref_file="$MENTEES_DIR/$mentee_name/domain_pref.txt"
+    # echo "$MENTEES_DIR/$mentee_name"
 
+    # Check if mentee exists
+    if [ ! -d "$MENTEES_DIR/$mentee_name" ]; then
+         echo "Mentee $mentee_name does not exist."
+         exit 1
+    fi
+
+    # Get domain preferences from mentee
+    echo "Enter your domain preferences (1-3) in preferred order (e.g., webdev, appdev, sysad):"
+    read -p "Preference 1: " pref1
+    read -p "Preference 2: " pref2
+    read -p "Preference 3: " pref3
+
+
+    # Write domain preferences to mentee's domain_pref.txt
+    echo "1. $pref1" > "$domain_pref_file"
+    echo "2. $pref2" >> "$domain_pref_file"
+    echo "3. $pref3" >> "$domain_pref_file"
+
+    # Append mentee's roll number and domains to mentees_domain.txt
+    echo "$mentee_name $pref1 $pref2 $pref3" >> "$CORE_HOME/mentees_domain.txt"
+
+    # Create directories for each chosen domain
+    mkdir -p "$MENTEES_DIR/$mentee_name/$pref1"
+    mkdir -p "$MENTEES_DIR/$mentee_name/$pref2"
+    mkdir -p "$MENTEES_DIR/$mentee_name/$pref3"
+
+    echo "Domain preferences set for mentee $mentee_name."
 }
+
 # Main script execution
 current_user=$(whoami)
-if [[ ! "$current_user" =~ ^[0-9]{8}$ ]]; then
+if [[ ! "$current_user" =~ ^[0-9]{8,9}$ ]]; then
     echo "Only mentees can set domain preferences."
     exit 1
 fi
+
 domain_pref "$current_user"
